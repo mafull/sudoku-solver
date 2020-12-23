@@ -1,3 +1,5 @@
+import axios from "axios";
+
 import { Array9, Cell, Grid } from "./types";
 
 const DUMMY_GRID: Grid = [
@@ -40,11 +42,10 @@ const VALID_INDICES = [0, 1, 2, 3, 4, 5, 6, 7, 8] as const;
 type RowOrColIndex = typeof VALID_INDICES[number];
 
 export class Sudoku {
-    grid: Grid = EMPTY_GRID;
+    grid: Grid;
 
-    constructor(grid?: Grid) {
-        if (grid) this.grid = grid;
-        else this.generate();
+    constructor(grid: Grid = EMPTY_GRID) {
+        this.grid = grid;
     }
 
     getCell(row: RowOrColIndex, col: RowOrColIndex): Cell {
@@ -64,15 +65,30 @@ export class Sudoku {
     }
 
     clear(): void {
+        for (let rowIdx = 0; rowIdx < this.grid.length; rowIdx++) {
+            for (let colIdx = 0; colIdx < this.grid[0].length; colIdx++) {
+                this.setCell(
+                    rowIdx as RowOrColIndex,
+                    colIdx as RowOrColIndex,
+                    null
+                );
+            }
+        }
         this.setGrid(EMPTY_GRID);
     }
 
     /**
      * @TODO actually generate
      */
-    generate(): Grid {
-        this.setGrid(DUMMY_GRID);
-        return this.grid;
+    async generate(difficulty: 1 | 2 | 3 = 2): Promise<void> {
+        this.clear();
+        const {
+            data: { squares },
+        } = await axios.get(
+            `http://www.cs.utep.edu/cheon/ws/sudoku/new/?size=9&level=${difficulty}`
+        );
+        squares.forEach(({ x, y, value }: any) => this.setCell(y, x, value));
+        // this.setGrid(DUMMY_GRID);
     }
 
     private static isUniqueSet(set: Array<Cell>): boolean {
@@ -134,9 +150,11 @@ export class Sudoku {
     }
 }
 
-type CellIndices = [row: RowOrColIndex, col: RowOrColIndex];
+export type CellIndices = [row: RowOrColIndex, col: RowOrColIndex];
 
-export function* solveViaBacktracking(sudoku: Sudoku): IterableIterator<Grid> {
+export function* solveViaBacktracking(
+    sudoku: Sudoku
+): IterableIterator<CellIndices> {
     const cellsToSolve: Array<CellIndices> = [];
 
     for (let rowIdx = 0; rowIdx < sudoku.grid.length; rowIdx++) {
@@ -166,44 +184,8 @@ export function* solveViaBacktracking(sudoku: Sudoku): IterableIterator<Grid> {
         if (sudoku.getCell(rowIdx, colIdx) !== null) {
             currCellIdx++;
         } else currCellIdx--;
-        sudoku.printGrid();
-        yield sudoku.grid;
+        yield [rowIdx, colIdx];
     }
 
-    console.log("Solved!");
-    // sudoku.setGrid(DUMMY_GRID_SOLVED);
+    alert("Solved!");
 }
-
-// export const solveViaBacktracking: SudokuSolver = (sudoku) => {
-//     const cellsToSolve: Array<CellIndices> = [];
-
-//     for (let rowIdx = 0; rowIdx < sudoku.grid.length; rowIdx++) {
-//         for (let colIdx = 0; colIdx < sudoku.grid[0].length; colIdx++) {
-//             if (sudoku.grid[rowIdx][colIdx] === null)
-//                 cellsToSolve.push([rowIdx as any, colIdx as any]);
-//         }
-//     }
-
-//     let currCellIdx = 0;
-//     while (currCellIdx < cellsToSolve.length) {
-//         const [rowIdx, colIdx] = cellsToSolve[currCellIdx];
-//         const currCellValue = sudoku.getCell(rowIdx, colIdx);
-//         for (
-//             let trial = currCellValue ? currCellValue + 1 : 1;
-//             trial <= 9;
-//             trial++
-//         ) {
-//             sudoku.setCell(rowIdx, colIdx, trial);
-//             if (sudoku.isCellValid(rowIdx, colIdx)) break;
-
-//             sudoku.setCell(rowIdx, colIdx, null);
-//         }
-//         if (sudoku.getCell(rowIdx, colIdx) !== null) {
-//             // sudoku.printGrid();
-//             currCellIdx++;
-//         } else currCellIdx--;
-//     }
-
-//     console.log("Solved!");
-//     // sudoku.setGrid(DUMMY_GRID_SOLVED);
-// };
