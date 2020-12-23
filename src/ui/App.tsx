@@ -1,26 +1,39 @@
-import React from "react";
-import logo from "./logo.svg";
+import React, { useState } from "react";
+
+import { solveViaBacktracking, Sudoku } from "../Sudoku";
+import { Grid } from "../types";
+import Board from "./Board";
 import "./App.css";
 
-function App() {
+const sudoku = new Sudoku();
+
+const App: React.FC = () => {
+    const [grid, setGrid] = useState<Grid>(sudoku.getGrid());
+
     return (
-        <div className="App">
-            <header className="App-header">
-                <img src={logo} className="App-logo" alt="logo" />
-                <p>
-                    Edit <code>src/App.tsx</code> and save to reload.
-                </p>
-                <a
-                    className="App-link"
-                    href="https://reactjs.org"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                >
-                    Learn React
-                </a>
-            </header>
+        <div className="container">
+            <Board grid={grid} />
+            <button onClick={() => setGrid(sudoku.generate())}>
+                Regenerate
+            </button>
+            <button
+                onClick={() => {
+                    solveViaBacktracking(sudoku);
+                    setGrid(sudoku.getGrid());
+                }}
+            >
+                Solve!
+            </button>
+            <button
+                onClick={() => {
+                    sudoku.clear();
+                    setGrid(sudoku.getGrid());
+                }}
+            >
+                Clear
+            </button>
         </div>
     );
-}
+};
 
 export default App;
