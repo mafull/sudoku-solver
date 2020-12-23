@@ -9,5 +9,5 @@ type _TupleOf<T, N extends number, R extends unknown[]> = R["length"] extends N
     : _TupleOf<T, N, [T, ...R]>;
 
 export type Cell = number | null;
-export type Row<T = Cell> = Tuple<T, 9>;
-export type Grid<T = Cell> = Tuple<Tuple<T, 9>, 9>;
+export type Array9<T = Cell> = Tuple<T, 9>;
+export type Grid<T = Cell> = Array9<Array9<T>>;

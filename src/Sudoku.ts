@@ -1,4 +1,4 @@
-import { Cell, Grid } from "./types";
+import { Array9, Cell, Grid } from "./types";
 
 const DUMMY_GRID: Grid = [
     [null, 7, 9, 5, null, 8, null, null, 4],
@@ -36,39 +36,27 @@ const EMPTY_GRID: Grid = [
     [null, null, null, null, null, null, null, null, null],
 ];
 
+const VALID_INDICES = [0, 1, 2, 3, 4, 5, 6, 7, 8] as const;
+type RowOrColIndex = typeof VALID_INDICES[number];
+
 export class Sudoku {
-    private grid: Grid = EMPTY_GRID;
+    grid: Grid = EMPTY_GRID;
 
     constructor(grid?: Grid) {
         if (grid) this.grid = grid;
         else this.generate();
     }
 
-    private checkRowIndex(row: number): void {
-        if (row < 0 || row > 8)
-            throw new Error(`row ${row} must be in the range 0-8`);
-    }
-    private checkColIndex(col: number): void {
-        if (col < 0 || col > 8)
-            throw new Error(`col ${col} must be in the range 0-8`);
-    }
-
-    getCell(row: number, col: number): Cell {
-        this.checkRowIndex(row);
-        this.checkColIndex(col);
-
+    getCell(row: RowOrColIndex, col: RowOrColIndex): Cell {
         return this.grid[row][col];
     }
 
-    setCell(row: number, col: number, value: number | null): void {
-        this.checkRowIndex(row);
-        this.checkColIndex(col);
-
+    setCell(
+        row: RowOrColIndex,
+        col: RowOrColIndex,
+        value: number | null
+    ): void {
         this.grid[row][col] = value;
-    }
-
-    getGrid(): Grid {
-        return this.grid;
     }
 
     setGrid(grid: Grid): void {
@@ -86,10 +74,136 @@ export class Sudoku {
         this.setGrid(DUMMY_GRID);
         return this.grid;
     }
+
+    private static isUniqueSet(set: Array<Cell>): boolean {
+        const seen = new Set<number>();
+        for (const cell of set) {
+            if (cell === null) continue;
+            if (seen.has(cell)) return false;
+            seen.add(cell);
+        }
+        return true;
+    }
+
+    isRowValid(rowIdx: RowOrColIndex): boolean {
+        const row = this.grid[rowIdx];
+        return Sudoku.isUniqueSet(row);
+    }
+
+    isColValid(colIdx: RowOrColIndex): boolean {
+        const col = this.grid.map((row) => row[colIdx]);
+        return Sudoku.isUniqueSet(col);
+    }
+
+    isSquareValid(rowIdx: RowOrColIndex, colIdx: RowOrColIndex): boolean {
+        const squareRowIdx = Math.floor(rowIdx / 3) * 3;
+        const squareColIdx = Math.floor(colIdx / 3) * 3;
+        const square = [
+            squareRowIdx,
+            squareRowIdx + 1,
+            squareRowIdx + 2,
+        ].flatMap((rowIdx) => {
+            const row = this.grid[rowIdx];
+            return row.slice(squareColIdx, squareColIdx + 3);
+        });
+        return Sudoku.isUniqueSet(square);
+    }
+
+    isCellValid(rowIdx: RowOrColIndex, colIdx: RowOrColIndex): boolean {
+        return (
+            this.isRowValid(rowIdx) &&
+            this.isColValid(colIdx) &&
+            this.isSquareValid(rowIdx, colIdx)
+        );
+    }
+
+    printGrid(): void {
+        let str = "";
+        for (let rowIdx = 0; rowIdx < this.grid.length; rowIdx++) {
+            const rowAsStrs = [
+                ...this.grid[rowIdx].slice(0, 3).map((cell) => cell || " "),
+                "|",
+                ...this.grid[rowIdx].slice(3, 6).map((cell) => cell || " "),
+                "|",
+                ...this.grid[rowIdx].slice(6).map((cell) => cell || " "),
+            ];
+            str += `\n ${rowAsStrs.join(" ")}`;
+            if (rowIdx === 2 || rowIdx === 5) str += "\n ---------------------";
+        }
+        console.log(str);
+    }
 }
 
-type SudokuSolver = (sudoku: Sudoku) => void;
+type CellIndices = [row: RowOrColIndex, col: RowOrColIndex];
 
-export const solveViaBacktracking: SudokuSolver = (sudoku) => {
-    sudoku.setGrid(DUMMY_GRID_SOLVED);
-};
+export function* solveViaBacktracking(sudoku: Sudoku): IterableIterator<Grid> {
+    const cellsToSolve: Array<CellIndices> = [];
+
+    for (let rowIdx = 0; rowIdx < sudoku.grid.length; rowIdx++) {
+        for (let colIdx = 0; colIdx < sudoku.grid[0].length; colIdx++) {
+            if (sudoku.grid[rowIdx][colIdx] === null)
+                cellsToSolve.push([rowIdx as any, colIdx as any]);
+        }
+    }
+
+    let currCellIdx = 0;
+    while (currCellIdx < cellsToSolve.length) {
+        const [rowIdx, colIdx] = cellsToSolve[currCellIdx];
+        const currCellValue = sudoku.getCell(rowIdx, colIdx);
+        if (currCellValue === 9) sudoku.setCell(rowIdx, colIdx, null);
+        else {
+            for (
+                let trial = currCellValue ? currCellValue + 1 : 1;
+                trial <= 9;
+                trial++
+            ) {
+                sudoku.setCell(rowIdx, colIdx, trial);
+                if (sudoku.isCellValid(rowIdx, colIdx)) break;
+
+                sudoku.setCell(rowIdx, colIdx, null);
+            }
+        }
+        if (sudoku.getCell(rowIdx, colIdx) !== null) {
+            currCellIdx++;
+        } else currCellIdx--;
+        sudoku.printGrid();
+        yield sudoku.grid;
+    }
+
+    console.log("Solved!");
+    // sudoku.setGrid(DUMMY_GRID_SOLVED);
+}
+
+// export const solveViaBacktracking: SudokuSolver = (sudoku) => {
+//     const cellsToSolve: Array<CellIndices> = [];
+
+//     for (let rowIdx = 0; rowIdx < sudoku.grid.length; rowIdx++) {
+//         for (let colIdx = 0; colIdx < sudoku.grid[0].length; colIdx++) {
+//             if (sudoku.grid[rowIdx][colIdx] === null)
+//                 cellsToSolve.push([rowIdx as any, colIdx as any]);
+//         }
+//     }
+
+//     let currCellIdx = 0;
+//     while (currCellIdx < cellsToSolve.length) {
+//         const [rowIdx, colIdx] = cellsToSolve[currCellIdx];
+//         const currCellValue = sudoku.getCell(rowIdx, colIdx);
+//         for (
+//             let trial = currCellValue ? currCellValue + 1 : 1;
+//             trial <= 9;
+//             trial++
+//         ) {
+//             sudoku.setCell(rowIdx, colIdx, trial);
+//             if (sudoku.isCellValid(rowIdx, colIdx)) break;
+
+//             sudoku.setCell(rowIdx, colIdx, null);
+//         }
+//         if (sudoku.getCell(rowIdx, colIdx) !== null) {
+//             // sudoku.printGrid();
+//             currCellIdx++;
+//         } else currCellIdx--;
+//     }
+
+//     console.log("Solved!");
+//     // sudoku.setGrid(DUMMY_GRID_SOLVED);
+// };
