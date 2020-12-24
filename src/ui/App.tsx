@@ -106,6 +106,7 @@ const App: React.FC = () => {
                                     e.target.value as SolverName
                                 )
                             }
+                            disabled={isSolving}
                         >
                             {solvers.map((solverName) => (
                                 <option key={solverName} value={solverName}>
