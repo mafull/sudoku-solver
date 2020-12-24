@@ -27,6 +27,19 @@ button:focus {
 button:hover:not(:disabled) {
     transform: scale(1.05);
     filter: brightness(105%);
+    cursor: pointer;
+}
+
+select {
+    margin: 1em;
+    padding: .5em 1em;
+    border-radius: .2em;
+    font-size: 1em;
+    font-weight: bold;
+}
+
+select:focus {
+    outline: 0;
 }
 
 .container {

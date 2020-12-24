@@ -7,6 +7,15 @@ import "./App.css";
 
 const sudoku = new Sudoku();
 
+const solvers = ["Backtracking"] as const;
+type SolverName = typeof solvers[number];
+const solverMap: Record<
+    SolverName,
+    (sudoku: Sudoku) => IterableIterator<CellIndices>
+> = {
+    Backtracking: solveViaBacktracking,
+};
+
 const App: React.FC = () => {
     const [grid, setGridRaw] = useState<Grid>(sudoku.grid);
     const setGrid = useCallback(
@@ -16,6 +25,9 @@ const App: React.FC = () => {
     );
 
     const [isSolving, setIsSolving] = useState<boolean>(false);
+    const [selectedSolverName, setSelectedSolverName] = useState<SolverName>(
+        solvers[0]
+    );
     const [solver, setSolver] = useState<ReturnType<
         typeof solveViaBacktracking
     > | null>(null);
@@ -56,7 +68,9 @@ const App: React.FC = () => {
                         onClick={() => {
                             sudoku.generate(difficulty).then(() => {
                                 setGrid(sudoku.grid);
-                                setSolver(solveViaBacktracking(sudoku));
+                                setSolver(
+                                    solverMap[selectedSolverName](sudoku)
+                                );
                             });
                         }}
                         disabled={isSolving}
@@ -81,6 +95,25 @@ const App: React.FC = () => {
                     >
                         Clear
                     </button>
+                </div>
+                <div className="variable-control">
+                    <span className="variable-control-label">Algorithm:</span>
+                    <div className="variable-control-controls">
+                        <select
+                            value={selectedSolverName}
+                            onChange={(e) =>
+                                setSelectedSolverName(
+                                    e.target.value as SolverName
+                                )
+                            }
+                        >
+                            {solvers.map((solverName) => (
+                                <option key={solverName} value={solverName}>
+                                    {solverName}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
                 <div className="variable-control">
                     <span className="variable-control-label">Interval:</span>
